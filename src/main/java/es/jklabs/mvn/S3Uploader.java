@@ -46,17 +46,29 @@ public class S3Uploader extends AbstractMojo {
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         File file = project.getArtifact().getFile();
-        upload(file);
+        if (file.exists()) {
+            upload(file);
+        } else {
+            throw new MojoExecutionException("Artifact not found");
+        }
     }
 
-    private void upload(File file) {
-        AmazonS3 s3 = getAmazonS3();
-        PutObjectRequest request = new PutObjectRequest(bucket, path + file.getName(), file);
-        if (s3.putObject(request) != null) {
-            AccessControlList acl = s3.getObjectAcl(bucket, path + file.getName());
-            Arrays.stream(cannonicalIds).forEach(c ->
-                    acl.grantPermission(new CanonicalGrantee(c), Permission.Read));
-            s3.setObjectAcl(bucket, path + file.getName(), acl);
+    private void upload(File file) throws MojoFailureException, MojoExecutionException {
+        try {
+            AmazonS3 s3 = getAmazonS3();
+            PutObjectRequest request = new PutObjectRequest(bucket, path + file.getName(), file);
+            if (s3.putObject(request) != null) {
+                AccessControlList acl = s3.getObjectAcl(bucket, path + file.getName());
+                Arrays.stream(cannonicalIds).forEach(c ->
+                        acl.grantPermission(new CanonicalGrantee(c), Permission.Read));
+                s3.setObjectAcl(bucket, path + file.getName(), acl);
+            } else {
+                throw new MojoExecutionException(path + file.getName() + " not uploaded to " + bucket);
+            }
+        } catch (MojoExecutionException m) {
+            throw m;
+        } catch (Exception e) {
+            throw new MojoFailureException(path + file.getName() + " not uploaded to " + bucket, e);
         }
     }
 
