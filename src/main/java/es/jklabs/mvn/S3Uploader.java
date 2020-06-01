@@ -15,16 +15,15 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
 import java.util.Arrays;
 
-@Mojo(name = "s3uploader", defaultPhase = LifecyclePhase.DEPLOY, requiresDependencyResolution = ResolutionScope.RUNTIME)
+@Mojo(name = "s3uploader", defaultPhase = LifecyclePhase.DEPLOY)
 public class S3Uploader extends AbstractMojo {
 
-    @Parameter(defaultValue = "${project}", readonly = true)
+    @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
     @Parameter(property = "aws.s3.bucket", required = true)
@@ -47,6 +46,7 @@ public class S3Uploader extends AbstractMojo {
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         File file = project.getArtifact().getFile();
+        getLog().info("Uploading " + project.getName());
         if (file.exists()) {
             getLog().info("Getting artifact: " + file.toString());
             upload(file);
