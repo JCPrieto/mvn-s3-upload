@@ -15,15 +15,16 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
 import java.util.Arrays;
 
-@Mojo(name = "s3uploader", defaultPhase = LifecyclePhase.DEPLOY)
+@Mojo(name = "s3uploader", defaultPhase = LifecyclePhase.DEPLOY, requiresDependencyResolution = ResolutionScope.RUNTIME)
 public class S3Uploader extends AbstractMojo {
 
-    @Parameter(property = "${project}", readonly = true)
+    @Parameter(defaultValue = "${project}", readonly = true)
     private MavenProject project;
 
     @Parameter(property = "aws.s3.bucket", required = true)
