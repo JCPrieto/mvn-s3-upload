@@ -23,7 +23,7 @@ import java.util.Arrays;
 @Mojo(name = "s3uploader", defaultPhase = LifecyclePhase.DEPLOY)
 public class S3Uploader extends AbstractMojo {
 
-    @Parameter(property = "project", readonly = true)
+    @Parameter(property = "${project}", readonly = true)
     private MavenProject project;
 
     @Parameter(property = "aws.s3.bucket", required = true)
@@ -47,6 +47,7 @@ public class S3Uploader extends AbstractMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         File file = project.getArtifact().getFile();
         if (file.exists()) {
+            getLog().info("Getting artifact: " + file.toString());
             upload(file);
         } else {
             throw new MojoExecutionException("Artifact not found");
@@ -58,10 +59,15 @@ public class S3Uploader extends AbstractMojo {
             AmazonS3 s3 = getAmazonS3();
             PutObjectRequest request = new PutObjectRequest(bucket, path + file.getName(), file);
             if (s3.putObject(request) != null) {
-                AccessControlList acl = s3.getObjectAcl(bucket, path + file.getName());
-                Arrays.stream(cannonicalIds).forEach(c ->
-                        acl.grantPermission(new CanonicalGrantee(c), Permission.Read));
-                s3.setObjectAcl(bucket, path + file.getName(), acl);
+                getLog().info("Artifact uploaded");
+                if (cannonicalIds.length != 0) {
+                    AccessControlList acl = s3.getObjectAcl(bucket, path + file.getName());
+                    Arrays.stream(cannonicalIds).forEach(c ->
+                            acl.grantPermission(new CanonicalGrantee(c), Permission.Read));
+                    s3.setObjectAcl(bucket, path + file.getName(), acl);
+                    getLog().info("Permissions added");
+                }
+                getLog().info("Upload succesfull");
             } else {
                 throw new MojoExecutionException(path + file.getName() + " not uploaded to " + bucket);
             }

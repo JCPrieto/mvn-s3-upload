@@ -8,6 +8,7 @@ Ejemplo de uso:
 ```
 <plugins>
     <plugin>
+    	<groupId>es.jklabs.mvn</groupId>
         <artifactId>mvn-s3-upload</artifactId>
         <version>0.0.1</version>
         <configuration>
