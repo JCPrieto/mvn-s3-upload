@@ -23,8 +23,19 @@ import java.util.Arrays;
 @Mojo(name = "s3uploader", defaultPhase = LifecyclePhase.DEPLOY)
 public class S3Uploader extends AbstractMojo {
 
+    public static final String FILE_SEPARATOR = "file.separator";
+
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
+
+    @Parameter(defaultValue = "${project.build.directory}", required = true)
+    private String outputDirectory;
+
+    @Parameter(defaultValue = "${project.build.finalName}", required = true, readonly = true)
+    private String warName;
+
+    @Parameter(property = "artifact.extension", defaultValue = "jar", required = true)
+    private String extension;
 
     @Parameter(property = "aws.s3.bucket", required = true)
     private String bucket;
@@ -45,8 +56,9 @@ public class S3Uploader extends AbstractMojo {
     private String[] cannonicalIds;
 
     public void execute() throws MojoExecutionException, MojoFailureException {
-        File file = project.getArtifact().getFile();
-        getLog().info("Uploading " + project.getName());
+        String ruta = outputDirectory + System.getProperty(FILE_SEPARATOR) + warName + "." + extension;
+        getLog().info("Uploading " + project.getName() + " : " + ruta);
+        File file = new File(ruta);
         if (file.exists()) {
             getLog().info("Getting artifact: " + file.toString());
             upload(file);
@@ -59,6 +71,7 @@ public class S3Uploader extends AbstractMojo {
         try {
             AmazonS3 s3 = getAmazonS3();
             PutObjectRequest request = new PutObjectRequest(bucket, path + file.getName(), file);
+            getLog().info("Uploading artifact to: " + bucket + System.getProperty(FILE_SEPARATOR) + path + System.getProperty(FILE_SEPARATOR) + file.getName());
             if (s3.putObject(request) != null) {
                 getLog().info("Artifact uploaded");
                 if (cannonicalIds.length != 0) {
