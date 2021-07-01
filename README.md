@@ -17,7 +17,7 @@ con anterioridad) o AWS Console.
     <plugin>
     	<groupId>es.jklabs.mvn</groupId>
         <artifactId>mvn-s3-upload</artifactId>
-        <version>0.0.14</version>
+        <version>0.0.15</version>
         <configuration>
             <bucket>my-bucket</bucket>
             <region>eu-west-1</region>
