@@ -12,12 +12,13 @@ con anterioridad) o AWS Console.
 
 #### Ejemplo de uso
 
-```
+```xml
+
 <plugins>
     <plugin>
-    	<groupId>es.jklabs.mvn</groupId>
+        <groupId>es.jklabs.mvn</groupId>
         <artifactId>mvn-s3-upload</artifactId>
-        <version>0.0.19</version>
+        <version>0.0.20</version>
         <configuration>
             <bucket>my-bucket</bucket>
             <region>eu-west-1</region>
