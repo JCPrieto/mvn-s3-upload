@@ -33,7 +33,7 @@
             <!-- annotations used to describe the plugin meta-data -->
             <groupId>org.apache.maven.plugin-tools</groupId>
             <artifactId>maven-plugin-annotations</artifactId>
-            <version>3.8.2</version>
+            <version>3.9.0</version>
             <scope>provided</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3 -->
