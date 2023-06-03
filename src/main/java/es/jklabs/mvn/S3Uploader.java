@@ -60,7 +60,7 @@ public class S3Uploader extends AbstractMojo {
         getLog().info("Uploading " + project.getName() + " : " + ruta);
         File file = new File(ruta);
         if (file.exists()) {
-            getLog().info("Getting artifact: " + file.toString());
+            getLog().info("Getting artifact: " + file);
             upload(file);
         } else {
             throw new MojoExecutionException("Artifact not found");
