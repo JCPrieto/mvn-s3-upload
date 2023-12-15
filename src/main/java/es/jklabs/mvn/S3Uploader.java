@@ -18,12 +18,11 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
+import java.nio.file.FileSystems;
 import java.util.Arrays;
 
 @Mojo(name = "s3uploader", defaultPhase = LifecyclePhase.DEPLOY)
 public class S3Uploader extends AbstractMojo {
-
-    public static final String FILE_SEPARATOR = "file.separator";
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -56,7 +55,7 @@ public class S3Uploader extends AbstractMojo {
     private String[] cannonicalIds;
 
     public void execute() throws MojoExecutionException, MojoFailureException {
-        String ruta = outputDirectory + System.getProperty(FILE_SEPARATOR) + warName + "." + extension;
+        String ruta = outputDirectory + FileSystems.getDefault().getSeparator() + warName + "." + extension;
         getLog().info("Uploading " + project.getName() + " : " + ruta);
         File file = new File(ruta);
         if (file.exists()) {
@@ -71,7 +70,7 @@ public class S3Uploader extends AbstractMojo {
         try {
             AmazonS3 s3 = getAmazonS3();
             PutObjectRequest request = new PutObjectRequest(bucket, path + file.getName(), file);
-            getLog().info("Uploading artifact to: " + bucket + System.getProperty(FILE_SEPARATOR) + path + System.getProperty(FILE_SEPARATOR) + file.getName());
+            getLog().info("Uploading artifact to: " + bucket + FileSystems.getDefault().getSeparator() + path + FileSystems.getDefault().getSeparator() + file.getName());
             if (s3.putObject(request) != null) {
                 getLog().info("Artifact uploaded");
                 if (cannonicalIds.length != 0) {
@@ -98,5 +97,37 @@ public class S3Uploader extends AbstractMojo {
                 .withCredentials(new AWSStaticCredentialsProvider(awsCreds))
                 .withRegion(region)
                 .build();
+    }
+
+    public void setOutputDirectory(String outputDirectory) {
+        this.outputDirectory = outputDirectory;
+    }
+
+    public void setWarName(String warName) {
+        this.warName = warName;
+    }
+
+    public void setExtension(String extension) {
+        this.extension = extension;
+    }
+
+    public void setAccessKey(String accessKey) {
+        this.accessKey = accessKey;
+    }
+
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
+    }
+
+    public void setCannonicalIds(String[] cannonicalIds) {
+        this.cannonicalIds = cannonicalIds;
+    }
+
+    public void setBucket(String bucket) {
+        this.bucket = bucket;
     }
 }

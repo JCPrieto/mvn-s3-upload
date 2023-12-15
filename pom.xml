@@ -6,7 +6,7 @@
 
     <groupId>es.jklabs.mvn</groupId>
     <artifactId>mvn-s3-upload</artifactId>
-    <version>0.0.44</version>
+    <version>0.0.45</version>
     <packaging>maven-plugin</packaging>
 
     <properties>
@@ -42,7 +42,47 @@
             <artifactId>aws-java-sdk-s3</artifactId>
             <version>1.12.603</version>
         </dependency>
-
+        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.10.1</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>4.11.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-inline -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>4.11.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-junit-jupiter -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>4.11.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.9</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-reload4j -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+            <version>2.0.9</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
