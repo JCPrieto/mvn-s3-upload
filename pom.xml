@@ -6,7 +6,7 @@
 
     <groupId>es.jklabs.mvn</groupId>
     <artifactId>mvn-s3-upload</artifactId>
-    <version>0.0.49</version>
+    <version>0.0.50</version>
     <packaging>maven-plugin</packaging>
 
     <properties>
