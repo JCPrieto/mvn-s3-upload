@@ -6,8 +6,9 @@ Plugin de Maven para subir el artifact a un bucket S3
 
 En la empresa para la que trabajo durante la implementacón de este proyecto, utilizamos bucket de S3 para almacenar los 
 war de nuestras aplicaciones web para que sean desplegado en los entornos de Pre-producción y Producción.
-Para facilitar y agilizar los despliegues al resto del equipo técnico, pensé en implementar un plugin para maven y no 
-depender der terceras aplicaciones (Ej: [BeyondDeploy](https://jcprieto.ml/portfolio.html), tambien implementada por mí 
+Para facilitar y agilizar los despliegues al resto del equipo técnico, pensé en implementar un plugin para maven y no
+depender der terceras aplicaciones (Ej: [BeyondDeploy](https://curriculum-a2a80.web.app/portfolio.html), tambien
+implementada por mí
 con anterioridad) o AWS Console.
 
 #### Ejemplo de uso
