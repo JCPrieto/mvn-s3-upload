@@ -11,16 +11,18 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 
 @ExtendWith(MockitoExtension.class)
 public class S3UploaderTest {
@@ -34,10 +36,37 @@ public class S3UploaderTest {
     private AmazonS3ClientBuilder builder;
     @Mock
     private AmazonS3 amazonS3;
+    private static File testFile;
+
+    private static void createNewFile() {
+        try {
+            testFile.createNewFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        try {
+            Files.delete(testFile.toPath());
+            testFile = null;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @BeforeEach
     public void init() {
         Mockito.when(project.getName()).thenReturn("Fake");
+        if (testFile == null) {
+            testFile = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + "testfile.jar");
+            createNewFile();
+        } else {
+            if (!testFile.exists()) {
+                createNewFile();
+            }
+        }
     }
 
     private void initS3Client() {
@@ -59,9 +88,10 @@ public class S3UploaderTest {
     @DisplayName("S3Uploader -> Subida del archivo al bucket")
     public void executeTest() {
         initS3Client();
-        s3Uploader.setOutputDirectory(System.getProperty("user.home"));
-        s3Uploader.setWarName("zipkin");
-        s3Uploader.setExtension("jar");
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
@@ -76,9 +106,10 @@ public class S3UploaderTest {
     @DisplayName("S3Uploader -> Error en la subida del archivo al bucket")
     public void executeErrorUploadingTest() {
         initS3Client();
-        s3Uploader.setOutputDirectory(System.getProperty("user.home"));
-        s3Uploader.setWarName("zipkin");
-        s3Uploader.setExtension("jar");
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
@@ -90,9 +121,10 @@ public class S3UploaderTest {
     @DisplayName("S3Uploader -> SdkClientException en la subida del archivo al bucket")
     public void executeSdkClientExceptionUploadingTest() {
         initS3Client();
-        s3Uploader.setOutputDirectory(System.getProperty("user.home"));
-        s3Uploader.setWarName("zipkin");
-        s3Uploader.setExtension("jar");
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
@@ -106,9 +138,10 @@ public class S3UploaderTest {
     @DisplayName("S3Uploader -> AmazonServiceException en la subida del archivo al bucket")
     public void executeAmazonServiceExceptionUploadingTest() {
         initS3Client();
-        s3Uploader.setOutputDirectory(System.getProperty("user.home"));
-        s3Uploader.setWarName("zipkin");
-        s3Uploader.setExtension("jar");
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
@@ -122,9 +155,10 @@ public class S3UploaderTest {
     @DisplayName("S3Uploader -> SdkClientException al añadirle permisos al archivo subido")
     public void executeSdkClientExceptionAclTest() {
         initS3Client();
-        s3Uploader.setOutputDirectory(System.getProperty("user.home"));
-        s3Uploader.setWarName("zipkin");
-        s3Uploader.setExtension("jar");
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
@@ -139,9 +173,10 @@ public class S3UploaderTest {
     @DisplayName("S3Uploader -> AmazonServiceException al añadirle permisos al archivo subido")
     public void executeAmazonServiceExceptionAclTest() {
         initS3Client();
-        s3Uploader.setOutputDirectory(System.getProperty("user.home"));
-        s3Uploader.setWarName("zipkin");
-        s3Uploader.setExtension("jar");
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
