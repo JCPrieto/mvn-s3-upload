@@ -1,4 +1,4 @@
-package es.jklabs.mvn;
+package io.github.jcprieto;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;

@@ -17,9 +17,9 @@ con anterioridad) o AWS Console.
 
 <plugins>
     <plugin>
-        <groupId>es.jklabs.mvn</groupId>
+        <groupId>io.github.jcprieto</groupId>
         <artifactId>mvn-s3-upload</artifactId>
-        <version>0.0.67</version>
+        <version>0.0.68</version>
         <configuration>
             <bucket>my-bucket</bucket>
             <region>eu-west-1</region>
