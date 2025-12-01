@@ -19,7 +19,7 @@ con anterioridad) o AWS Console.
     <plugin>
         <groupId>es.jklabs.mvn</groupId>
         <artifactId>mvn-s3-upload</artifactId>
-        <version>0.0.70</version>
+        <version>0.1.0</version>
         <configuration>
             <bucket>my-bucket</bucket>
             <region>eu-west-1</region>
@@ -27,6 +27,7 @@ con anterioridad) o AWS Console.
             <extension>war</extension>
             <accessKey>XXXXXXXXXXX</accessKey>
             <secretKey>XXXXXXXXXXX</secretKey>
+            <showProgress>true</showProgress>
             <cannonicalIds>
                 <cannonicalId>XXXXXXXXXXX</cannonicalId>
                 <cannonicalId>XXXXXXXXXXX</cannonicalId>
@@ -43,7 +44,3 @@ con anterioridad) o AWS Console.
     </plugin>
 </plugins>
 ```
-
-##### ToDo
-
-- Mostrar información de progreso de la subida
