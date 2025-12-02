@@ -5,13 +5,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <name>MVN S3 Upload</name>
-    <description>Un plugin Maven para subir artifacts a un bucket de Amazon S3 y gestionar sus permisos</description>
+    <description>Maven plugin to upload build artifacts to an AWS S3 bucket.</description>
     <url>https://github.com/JCPrieto/mvn-s3-upload</url>
 
     <licenses>
         <license>
             <name>GNU General Public License v3.0</name>
             <url>https://www.gnu.org/licenses/gpl-3.0.html</url>
+            <distribution>repo</distribution>
         </license>
     </licenses>
 
@@ -25,19 +26,21 @@
         <developer>
             <id>JCPrieto</id>
             <name>Juan Carlos Prieto</name>
+            <email>JuanC.Prieto.Silos@gmail.com</email>
             <url>https://github.com/JCPrieto</url>
         </developer>
     </developers>
 
     <groupId>io.github.jcprieto</groupId>
     <artifactId>mvn-s3-upload</artifactId>
-    <version>0.0.68</version>
+    <version>0.2.0</version>
     <packaging>maven-plugin</packaging>
 
     <properties>
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
     <dependencies>
@@ -59,14 +62,14 @@
             <!-- annotations used to describe the plugin meta-data -->
             <groupId>org.apache.maven.plugin-tools</groupId>
             <artifactId>maven-plugin-annotations</artifactId>
-            <version>3.15.1</version>
+            <version>3.15.2</version>
             <scope>provided</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3 -->
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
-            <version>1.12.788</version>
+            <version>1.12.794</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
         <dependency>
@@ -79,13 +82,6 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>4.11.0</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-inline -->
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-inline</artifactId>
             <version>4.11.0</version>
             <scope>test</scope>
         </dependency>
@@ -183,7 +179,7 @@
                 </executions>
                 <configuration>
                     <gpgExecutable>gpg</gpgExecutable>
-                    <keyname>1C77B30EE73714DC</keyname>
+                    <keyname>558442263B6AC29B9FF4AEB5F320065B4D152C59</keyname>
                     <passphrase>${env.GPG_PASSPHRASE}</passphrase>
                 </configuration>
             </plugin>

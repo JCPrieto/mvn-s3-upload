@@ -1,4 +1,4 @@
-package io.github.jcprieto;
+package io.github.jcprieto.mvn;
 
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -20,6 +20,8 @@ import org.apache.maven.project.MavenProject;
 import java.io.File;
 import java.nio.file.FileSystems;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Mojo(name = "s3uploader", defaultPhase = LifecyclePhase.DEPLOY)
 public class S3Uploader extends AbstractMojo {
@@ -52,7 +54,12 @@ public class S3Uploader extends AbstractMojo {
     private String secretKey;
 
     @Parameter(property = "aws.s3.cannonicalIds")
-    private String[] cannonicalIds;
+    private String[] cannonicalIds = new String[0];
+
+    @Parameter(property = "aws.s3.showProgress", defaultValue = "false")
+    private boolean showProgress;
+
+    private AmazonS3 amazonS3;
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         String ruta = outputDirectory + FileSystems.getDefault().getSeparator() + warName + "." + extension;
@@ -70,6 +77,9 @@ public class S3Uploader extends AbstractMojo {
         try {
             AmazonS3 s3 = getAmazonS3();
             PutObjectRequest request = new PutObjectRequest(bucket, path + file.getName(), file);
+            if (showProgress) {
+                addProgressListener(request, file.length());
+            }
             getLog().info("Uploading artifact to: " + bucket + FileSystems.getDefault().getSeparator() + path + FileSystems.getDefault().getSeparator() + file.getName());
             if (s3.putObject(request) != null) {
                 getLog().info("Artifact uploaded");
@@ -92,11 +102,18 @@ public class S3Uploader extends AbstractMojo {
     }
 
     private AmazonS3 getAmazonS3() {
+        if (amazonS3 != null) {
+            return amazonS3;
+        }
         BasicAWSCredentials awsCreds = new BasicAWSCredentials(accessKey, secretKey);
         return AmazonS3ClientBuilder.standard()
                 .withCredentials(new AWSStaticCredentialsProvider(awsCreds))
                 .withRegion(region)
                 .build();
+    }
+
+    public void setAmazonS3(AmazonS3 amazonS3) {
+        this.amazonS3 = amazonS3;
     }
 
     public void setOutputDirectory(String outputDirectory) {
@@ -129,5 +146,30 @@ public class S3Uploader extends AbstractMojo {
 
     public void setBucket(String bucket) {
         this.bucket = bucket;
+    }
+
+    private void addProgressListener(PutObjectRequest request, long totalBytes) {
+        if (totalBytes <= 0) {
+            getLog().info("Artifact size is 0 bytes, skipping progress logging");
+            return;
+        }
+        AtomicLong transferredBytes = new AtomicLong(0);
+        AtomicInteger lastPercentageEmitted = new AtomicInteger(0);
+        request.setGeneralProgressListener(progressEvent -> {
+            long bytes = progressEvent.getBytesTransferred();
+            if (bytes <= 0) {
+                return;
+            }
+            long current = Math.min(transferredBytes.addAndGet(bytes), totalBytes);
+            int percentage = (int) Math.min((current * 100) / totalBytes, 100);
+            if (percentage >= lastPercentageEmitted.get() + 10 || current == totalBytes) {
+                lastPercentageEmitted.set(percentage);
+                getLog().info("Upload progress: " + percentage + "% (" + current + "/" + totalBytes + " bytes)");
+            }
+        });
+    }
+
+    public void setShowProgress(boolean showProgress) {
+        this.showProgress = showProgress;
     }
 }
