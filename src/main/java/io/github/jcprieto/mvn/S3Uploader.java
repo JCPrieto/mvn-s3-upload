@@ -1,4 +1,4 @@
-package es.jklabs.mvn;
+package io.github.jcprieto.mvn;
 
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;

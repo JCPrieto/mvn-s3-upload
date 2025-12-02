@@ -11,15 +11,23 @@ depender der terceras aplicaciones (Ej: [BeyondDeploy](https://curriculum-a2a80.
 implementada por mí
 con anterioridad) o AWS Console.
 
+#### Cómo añadirlo a tu proyecto
+
+1. Asegúrate de usar la última versión publicada en Maven Central (reemplaza `0.2.0` si aparece una más reciente).
+2. Declara el plugin en tu `pom.xml` dentro de la sección `<build><plugins>`.
+3. Configura bucket, región, ruta y credenciales según tu caso.
+4. Invoca el goal `s3uploader` en la fase donde quieras que se ejecute (por ejemplo, con una ejecución sin fase se
+   ejecutará al lanzar `mvn package`).
+
 #### Ejemplo de uso
 
 ```xml
 
 <plugins>
     <plugin>
-        <groupId>es.jklabs.mvn</groupId>
+        <groupId>io.github.jcprieto</groupId>
         <artifactId>mvn-s3-upload</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0</version>
         <configuration>
             <bucket>my-bucket</bucket>
             <region>eu-west-1</region>

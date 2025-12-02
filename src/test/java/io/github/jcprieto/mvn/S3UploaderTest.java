@@ -1,4 +1,4 @@
-package es.jklabs.mvn;
+package io.github.jcprieto.mvn;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
@@ -30,13 +30,13 @@ import java.nio.file.StandardOpenOption;
 @ExtendWith(MockitoExtension.class)
 public class S3UploaderTest {
 
+    private static File testFile;
     @InjectMocks
     S3Uploader s3Uploader;
     @Mock
     private MavenProject project;
     @Mock
     private AmazonS3 amazonS3;
-    private static File testFile;
 
     private static void createNewFile() {
         try {
