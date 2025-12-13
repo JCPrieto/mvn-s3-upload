@@ -33,7 +33,7 @@
 
     <groupId>io.github.jcprieto</groupId>
     <artifactId>mvn-s3-upload</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
     <packaging>maven-plugin</packaging>
 
     <properties>
@@ -71,10 +71,10 @@
             <artifactId>aws-java-sdk-s3</artifactId>
             <version>1.12.794</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
+        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
+            <artifactId>junit-jupiter</artifactId>
             <version>5.13.0</version>
             <scope>test</scope>
         </dependency>
@@ -137,6 +137,11 @@
                     <waitUntil>published</waitUntil>
                     <checksums>required</checksums>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

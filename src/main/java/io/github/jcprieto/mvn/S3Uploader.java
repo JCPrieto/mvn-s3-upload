@@ -59,9 +59,13 @@ public class S3Uploader extends AbstractMojo {
     @Parameter(property = "aws.s3.showProgress", defaultValue = "false")
     private boolean showProgress;
 
+    @Parameter(property = "aws.s3.disableSdkV1DeprecationAnnouncement", defaultValue = "false")
+    private boolean disableSdkV1DeprecationAnnouncement;
+
     private AmazonS3 amazonS3;
 
     public void execute() throws MojoExecutionException, MojoFailureException {
+        maybeDisableAwsSdkV1DeprecationAnnouncement();
         String ruta = outputDirectory + FileSystems.getDefault().getSeparator() + warName + "." + extension;
         getLog().info("Uploading " + project.getName() + " : " + ruta);
         File file = new File(ruta);
@@ -105,11 +109,21 @@ public class S3Uploader extends AbstractMojo {
         if (amazonS3 != null) {
             return amazonS3;
         }
+        maybeDisableAwsSdkV1DeprecationAnnouncement();
         BasicAWSCredentials awsCreds = new BasicAWSCredentials(accessKey, secretKey);
         return AmazonS3ClientBuilder.standard()
                 .withCredentials(new AWSStaticCredentialsProvider(awsCreds))
                 .withRegion(region)
                 .build();
+    }
+
+    private void maybeDisableAwsSdkV1DeprecationAnnouncement() {
+        if (!disableSdkV1DeprecationAnnouncement) {
+            return;
+        }
+        if (!"true".equalsIgnoreCase(System.getProperty("aws.java.v1.disableDeprecationAnnouncement"))) {
+            System.setProperty("aws.java.v1.disableDeprecationAnnouncement", "true");
+        }
     }
 
     public void setAmazonS3(AmazonS3 amazonS3) {
@@ -148,6 +162,10 @@ public class S3Uploader extends AbstractMojo {
         this.bucket = bucket;
     }
 
+    public void setPath(String path) {
+        this.path = path;
+    }
+
     private void addProgressListener(PutObjectRequest request, long totalBytes) {
         if (totalBytes <= 0) {
             getLog().info("Artifact size is 0 bytes, skipping progress logging");
@@ -171,5 +189,9 @@ public class S3Uploader extends AbstractMojo {
 
     public void setShowProgress(boolean showProgress) {
         this.showProgress = showProgress;
+    }
+
+    public void setDisableSdkV1DeprecationAnnouncement(boolean disableSdkV1DeprecationAnnouncement) {
+        this.disableSdkV1DeprecationAnnouncement = disableSdkV1DeprecationAnnouncement;
     }
 }

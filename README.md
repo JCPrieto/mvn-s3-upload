@@ -13,7 +13,7 @@ con anterioridad) o AWS Console.
 
 #### Cómo añadirlo a tu proyecto
 
-1. Asegúrate de usar la última versión publicada en Maven Central (reemplaza `0.2.0` si aparece una más reciente).
+1. Asegúrate de usar la última versión publicada en Maven Central (reemplaza `0.2.1` si aparece una más reciente).
 2. Declara el plugin en tu `pom.xml` dentro de la sección `<build><plugins>`.
 3. Configura bucket, región, ruta y credenciales según tu caso.
 4. Invoca el goal `s3uploader` en la fase donde quieras que se ejecute (por ejemplo, con una ejecución sin fase se
@@ -27,7 +27,7 @@ con anterioridad) o AWS Console.
     <plugin>
         <groupId>io.github.jcprieto</groupId>
         <artifactId>mvn-s3-upload</artifactId>
-        <version>0.2.0</version>
+       <version>0.2.1</version>
         <configuration>
             <bucket>my-bucket</bucket>
             <region>eu-west-1</region>
@@ -36,6 +36,8 @@ con anterioridad) o AWS Console.
             <accessKey>XXXXXXXXXXX</accessKey>
             <secretKey>XXXXXXXXXXX</secretKey>
             <showProgress>true</showProgress>
+           <!-- Silencia el aviso de mantenimiento del AWS SDK v1 (opcional) -->
+           <disableSdkV1DeprecationAnnouncement>true</disableSdkV1DeprecationAnnouncement>
             <cannonicalIds>
                 <cannonicalId>XXXXXXXXXXX</cannonicalId>
                 <cannonicalId>XXXXXXXXXXX</cannonicalId>
@@ -52,3 +54,11 @@ con anterioridad) o AWS Console.
     </plugin>
 </plugins>
 ```
+
+#### Aviso AWS SDK v1
+
+Si ves el mensaje de mantenimiento del AWS SDK for Java 1.x, puedes desactivarlo:
+
+- En el plugin: `<disableSdkV1DeprecationAnnouncement>true</disableSdkV1DeprecationAnnouncement>`
+- O a nivel de ejecución: `AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT=true` (variable de entorno) /
+  `-Daws.java.v1.disableDeprecationAnnouncement=true` (system property)

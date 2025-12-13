@@ -31,6 +31,7 @@ import java.nio.file.StandardOpenOption;
 public class S3UploaderTest {
 
     private static File testFile;
+    private String previousDisableDeprecationAnnouncementProperty;
     @InjectMocks
     S3Uploader s3Uploader;
     @Mock
@@ -65,6 +66,7 @@ public class S3UploaderTest {
 
     @BeforeEach
     public void init() {
+        previousDisableDeprecationAnnouncementProperty = System.getProperty("aws.java.v1.disableDeprecationAnnouncement");
         Mockito.when(project.getName()).thenReturn("Fake");
         if (testFile == null) {
             testFile = new File("target" + FileSystems.getDefault().getSeparator() + "test-classes" + FileSystems.getDefault().getSeparator() + "testfile.jar");
@@ -73,6 +75,15 @@ public class S3UploaderTest {
             if (!testFile.exists()) {
                 createNewFile();
             }
+        }
+    }
+
+    @AfterEach
+    public void restoreSystemProperties() {
+        if (previousDisableDeprecationAnnouncementProperty == null) {
+            System.clearProperty("aws.java.v1.disableDeprecationAnnouncement");
+        } else {
+            System.setProperty("aws.java.v1.disableDeprecationAnnouncement", previousDisableDeprecationAnnouncementProperty);
         }
     }
 
@@ -89,9 +100,29 @@ public class S3UploaderTest {
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
         Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenReturn(new PutObjectResult());
         Mockito.when(amazonS3.getObjectAcl(Mockito.anyString(), Mockito.anyString())).thenReturn(new AccessControlList());
         Assertions.assertDoesNotThrow(s3Uploader::execute);
+    }
+
+    @Test
+    @DisplayName("S3Uploader -> Desactiva aviso deprecación SDK v1 cuando se configura")
+    public void disableSdkV1DeprecationAnnouncementTest() {
+        s3Uploader.setAmazonS3(amazonS3);
+        s3Uploader.setDisableSdkV1DeprecationAnnouncement(true);
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
+        s3Uploader.setAccessKey("accessKey");
+        s3Uploader.setSecretKey("secretKey");
+        s3Uploader.setRegion(Regions.EU_WEST_3.getName());
+        s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
+        Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenReturn(new PutObjectResult());
+        Assertions.assertDoesNotThrow(s3Uploader::execute);
+        Assertions.assertEquals("true", System.getProperty("aws.java.v1.disableDeprecationAnnouncement"));
     }
 
     @Test
@@ -107,6 +138,7 @@ public class S3UploaderTest {
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
         s3Uploader.setShowProgress(true);
         ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
         Mockito.when(amazonS3.putObject(captor.capture())).thenReturn(new PutObjectResult());
@@ -128,6 +160,7 @@ public class S3UploaderTest {
         s3Uploader.setSecretKey("secretKey");
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
         s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
         Assertions.assertThrows(MojoExecutionException.class, () -> s3Uploader.execute());
     }
 
@@ -144,6 +177,7 @@ public class S3UploaderTest {
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
         Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenThrow(new SdkClientException("Error"));
         Assertions.assertThrows(MojoFailureException.class, () -> s3Uploader.execute());
     }
@@ -161,6 +195,7 @@ public class S3UploaderTest {
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
         Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenThrow(new AmazonServiceException("Error"));
         Assertions.assertThrows(MojoFailureException.class, () -> s3Uploader.execute());
     }
@@ -178,6 +213,7 @@ public class S3UploaderTest {
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
         Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenReturn(new PutObjectResult());
         Mockito.when(amazonS3.getObjectAcl(Mockito.anyString(), Mockito.anyString())).thenThrow(new SdkClientException("Error"));
         Assertions.assertThrows(MojoFailureException.class, () -> s3Uploader.execute());
@@ -196,6 +232,7 @@ public class S3UploaderTest {
         s3Uploader.setRegion(Regions.EU_WEST_3.getName());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
         Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenReturn(new PutObjectResult());
         Mockito.when(amazonS3.getObjectAcl(Mockito.anyString(), Mockito.anyString())).thenThrow(new AmazonServiceException("Error"));
         Assertions.assertThrows(MojoFailureException.class, () -> s3Uploader.execute());
