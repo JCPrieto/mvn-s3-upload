@@ -31,6 +31,7 @@
 - Stub AWS interactions; do not reach real S3 in unit tests. Use mocks/fakes and temporary files under
   `target/test-classes` or JUnit temp directories.
 - Aim to cover configuration parsing, path resolution, and error handling for missing credentials.
+- After code modifications, review unit tests to see if they need updates for API or behavior changes.
 
 ## Commit & Pull Request Guidelines
 

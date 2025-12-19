@@ -1,14 +1,5 @@
 package io.github.jcprieto.mvn;
 
-
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.CanonicalGrantee;
-import com.amazonaws.services.s3.model.Permission;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -16,12 +7,24 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.File;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Mojo(name = "s3uploader", defaultPhase = LifecyclePhase.DEPLOY)
 public class S3Uploader extends AbstractMojo {
@@ -62,7 +65,7 @@ public class S3Uploader extends AbstractMojo {
     @Parameter(property = "aws.s3.disableSdkV1DeprecationAnnouncement", defaultValue = "false")
     private boolean disableSdkV1DeprecationAnnouncement;
 
-    private AmazonS3 amazonS3;
+    private S3Client s3Client;
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         maybeDisableAwsSdkV1DeprecationAnnouncement();
@@ -79,19 +82,36 @@ public class S3Uploader extends AbstractMojo {
 
     private void upload(File file) throws MojoFailureException, MojoExecutionException {
         try {
-            AmazonS3 s3 = getAmazonS3();
-            PutObjectRequest request = new PutObjectRequest(bucket, path + file.getName(), file);
+            S3Client s3Client3 = getS3Client();
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(path + file.getName())
+                    .build();
             if (showProgress) {
-                addProgressListener(request, file.length());
+                if (file.length() <= 0) {
+                    getLog().info("Artifact size is 0 bytes, skipping progress logging");
+                }
             }
             getLog().info("Uploading artifact to: " + bucket + FileSystems.getDefault().getSeparator() + path + FileSystems.getDefault().getSeparator() + file.getName());
-            if (s3.putObject(request) != null) {
+            RequestBody requestBody = buildRequestBody(file);
+            if (s3Client3.putObject(request, requestBody) != null) {
                 getLog().info("Artifact uploaded");
                 if (cannonicalIds.length != 0) {
-                    AccessControlList acl = s3.getObjectAcl(bucket, path + file.getName());
-                    Arrays.stream(cannonicalIds).forEach(c ->
-                            acl.grantPermission(new CanonicalGrantee(c), Permission.Read));
-                    s3.setObjectAcl(bucket, path + file.getName(), acl);
+                    PutObjectAclRequest putObjectAclRequest = PutObjectAclRequest.builder()
+                            .bucket(bucket)
+                            .key(path + file.getName())
+                            .accessControlPolicy(AccessControlPolicy.builder()
+                                    .grants(Arrays.stream(cannonicalIds).map(c -> Grant.builder()
+                                                    .grantee(Grantee.builder()
+                                                            .type(Type.CANONICAL_USER)
+                                                            .id(c)
+                                                            .build())
+                                                    .permission(Permission.READ)
+                                                    .build())
+                                            .collect(Collectors.toList()))
+                                    .build())
+                            .build();
+                    s3Client3.putObjectAcl(putObjectAclRequest);
                     getLog().info("Permissions added");
                 }
                 getLog().info("Upload succesfull");
@@ -105,15 +125,34 @@ public class S3Uploader extends AbstractMojo {
         }
     }
 
-    private AmazonS3 getAmazonS3() {
-        if (amazonS3 != null) {
-            return amazonS3;
+    private RequestBody buildRequestBody(File file) {
+        if (!showProgress || file.length() <= 0) {
+            return RequestBody.fromFile(file.toPath());
         }
-        maybeDisableAwsSdkV1DeprecationAnnouncement();
-        BasicAWSCredentials awsCreds = new BasicAWSCredentials(accessKey, secretKey);
-        return AmazonS3ClientBuilder.standard()
-                .withCredentials(new AWSStaticCredentialsProvider(awsCreds))
-                .withRegion(region)
+        ProgressTracker tracker = new ProgressTracker(getLog(), file.length());
+        return RequestBody.fromContentProvider(() -> openProgressInputStream(file, tracker), file.length(), "application/octet-stream");
+    }
+
+    private InputStream openProgressInputStream(File file, ProgressTracker tracker) {
+        try {
+            return new ProgressInputStream(Files.newInputStream(file.toPath()), tracker);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to open artifact for upload: " + file, e);
+        }
+    }
+
+    private S3Client getS3Client() {
+        if (s3Client != null) {
+            return s3Client;
+        }
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.builder()
+                .accessKeyId(accessKey)
+                .secretAccessKey(secretKey)
+                .build();
+        AwsCredentialsProvider awsCredentialsProvider = StaticCredentialsProvider.create(awsCreds);
+        return S3Client.builder()
+                .credentialsProvider(awsCredentialsProvider)
+                .region(Region.of(region))
                 .build();
     }
 
@@ -124,10 +163,6 @@ public class S3Uploader extends AbstractMojo {
         if (!"true".equalsIgnoreCase(System.getProperty("aws.java.v1.disableDeprecationAnnouncement"))) {
             System.setProperty("aws.java.v1.disableDeprecationAnnouncement", "true");
         }
-    }
-
-    public void setAmazonS3(AmazonS3 amazonS3) {
-        this.amazonS3 = amazonS3;
     }
 
     public void setOutputDirectory(String outputDirectory) {
@@ -166,25 +201,55 @@ public class S3Uploader extends AbstractMojo {
         this.path = path;
     }
 
-    private void addProgressListener(PutObjectRequest request, long totalBytes) {
-        if (totalBytes <= 0) {
-            getLog().info("Artifact size is 0 bytes, skipping progress logging");
-            return;
+    private static class ProgressTracker {
+        private final org.apache.maven.plugin.logging.Log log;
+        private final long totalBytes;
+        private final AtomicLong transferredBytes = new AtomicLong(0);
+        private final AtomicInteger lastPercentageEmitted = new AtomicInteger(0);
+
+        private ProgressTracker(org.apache.maven.plugin.logging.Log log, long totalBytes) {
+            this.log = log;
+            this.totalBytes = totalBytes;
         }
-        AtomicLong transferredBytes = new AtomicLong(0);
-        AtomicInteger lastPercentageEmitted = new AtomicInteger(0);
-        request.setGeneralProgressListener(progressEvent -> {
-            long bytes = progressEvent.getBytesTransferred();
-            if (bytes <= 0) {
+
+        private void onBytesRead(int bytesRead) {
+            if (bytesRead <= 0) {
                 return;
             }
-            long current = Math.min(transferredBytes.addAndGet(bytes), totalBytes);
+            long current = Math.min(transferredBytes.addAndGet(bytesRead), totalBytes);
             int percentage = (int) Math.min((current * 100) / totalBytes, 100);
             if (percentage >= lastPercentageEmitted.get() + 10 || current == totalBytes) {
                 lastPercentageEmitted.set(percentage);
-                getLog().info("Upload progress: " + percentage + "% (" + current + "/" + totalBytes + " bytes)");
+                log.info("Upload progress: " + percentage + "% (" + current + "/" + totalBytes + " bytes)");
             }
-        });
+        }
+    }
+
+    private static class ProgressInputStream extends FilterInputStream {
+        private final ProgressTracker tracker;
+
+        private ProgressInputStream(InputStream in, ProgressTracker tracker) {
+            super(in);
+            this.tracker = tracker;
+        }
+
+        @Override
+        public int read() throws IOException {
+            int value = super.read();
+            if (value >= 0) {
+                tracker.onBytesRead(1);
+            }
+            return value;
+        }
+
+        @Override
+        public int read(byte[] buffer, int offset, int length) throws IOException {
+            int bytesRead = super.read(buffer, offset, length);
+            if (bytesRead > 0) {
+                tracker.onBytesRead(bytesRead);
+            }
+            return bytesRead;
+        }
     }
 
     public void setShowProgress(boolean showProgress) {

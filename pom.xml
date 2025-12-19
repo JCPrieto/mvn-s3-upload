@@ -33,7 +33,7 @@
 
     <groupId>io.github.jcprieto</groupId>
     <artifactId>mvn-s3-upload</artifactId>
-    <version>0.2.1</version>
+    <version>0.3.0</version>
     <packaging>maven-plugin</packaging>
 
     <properties>
@@ -65,11 +65,12 @@
             <version>3.15.2</version>
             <scope>provided</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3 -->
+        <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/s3 -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-s3</artifactId>
-            <version>1.12.794</version>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.40.10</version>
+            <scope>compile</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter -->
         <dependency>

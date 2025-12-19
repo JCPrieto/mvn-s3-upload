@@ -1,13 +1,5 @@
 package io.github.jcprieto.mvn;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
@@ -18,6 +10,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +34,7 @@ public class S3UploaderTest {
     @Mock
     private MavenProject project;
     @Mock
-    private AmazonS3 amazonS3;
+    private S3Client s3Client;
 
     private static void createNewFile() {
         try {
@@ -90,26 +87,26 @@ public class S3UploaderTest {
     @Test
     @DisplayName("S3Uploader -> Subida del archivo al bucket")
     public void executeTest() {
-        s3Uploader.setAmazonS3(amazonS3);
         s3Uploader.setOutputDirectory(testFile.getParent());
         String[] filename = testFile.getName().split("\\.");
         s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
         s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
-        s3Uploader.setRegion(Regions.EU_WEST_3.getName());
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
         s3Uploader.setPath("folder/");
-        Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenReturn(new PutObjectResult());
-        Mockito.when(amazonS3.getObjectAcl(Mockito.anyString(), Mockito.anyString())).thenReturn(new AccessControlList());
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        Mockito.when(s3Client.putObjectAcl(Mockito.any(PutObjectAclRequest.class)))
+                .thenReturn(PutObjectAclResponse.builder().build());
         Assertions.assertDoesNotThrow(s3Uploader::execute);
     }
 
     @Test
     @DisplayName("S3Uploader -> Desactiva aviso deprecación SDK v1 cuando se configura")
     public void disableSdkV1DeprecationAnnouncementTest() {
-        s3Uploader.setAmazonS3(amazonS3);
         s3Uploader.setDisableSdkV1DeprecationAnnouncement(true);
         s3Uploader.setOutputDirectory(testFile.getParent());
         String[] filename = testFile.getName().split("\\.");
@@ -117,124 +114,128 @@ public class S3UploaderTest {
         s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
-        s3Uploader.setRegion(Regions.EU_WEST_3.getName());
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
         s3Uploader.setBucket("bucket");
         s3Uploader.setPath("folder/");
-        Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenReturn(new PutObjectResult());
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
         Assertions.assertDoesNotThrow(s3Uploader::execute);
         Assertions.assertEquals("true", System.getProperty("aws.java.v1.disableDeprecationAnnouncement"));
     }
 
     @Test
-    @DisplayName("S3Uploader -> Configura listener de progreso cuando se solicita")
+    @DisplayName("S3Uploader -> Usa request body con longitud cuando se solicita progreso")
     public void executeWithProgressListenerTest() {
-        s3Uploader.setAmazonS3(amazonS3);
         s3Uploader.setOutputDirectory(testFile.getParent());
         String[] filename = testFile.getName().split("\\.");
         s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
         s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
-        s3Uploader.setRegion(Regions.EU_WEST_3.getName());
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
         s3Uploader.setPath("folder/");
         s3Uploader.setShowProgress(true);
-        ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
-        Mockito.when(amazonS3.putObject(captor.capture())).thenReturn(new PutObjectResult());
-        Mockito.when(amazonS3.getObjectAcl(Mockito.anyString(), Mockito.anyString())).thenReturn(new AccessControlList());
+        ArgumentCaptor<RequestBody> bodyCaptor = ArgumentCaptor.forClass(RequestBody.class);
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), bodyCaptor.capture()))
+                .thenReturn(PutObjectResponse.builder().build());
+        Mockito.when(s3Client.putObjectAcl(Mockito.any(PutObjectAclRequest.class)))
+                .thenReturn(PutObjectAclResponse.builder().build());
         Assertions.assertDoesNotThrow(s3Uploader::execute);
-        ProgressListener listener = captor.getValue().getGeneralProgressListener();
-        Assertions.assertNotEquals(ProgressListener.NOOP, listener);
+        Assertions.assertEquals(testFile.length(), bodyCaptor.getValue().optionalContentLength().orElse(-1L));
     }
 
     @Test
     @DisplayName("S3Uploader -> Error en la subida del archivo al bucket")
     public void executeErrorUploadingTest() {
-        s3Uploader.setAmazonS3(amazonS3);
         s3Uploader.setOutputDirectory(testFile.getParent());
         String[] filename = testFile.getName().split("\\.");
         s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
         s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
-        s3Uploader.setRegion(Regions.EU_WEST_3.getName());
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
         s3Uploader.setBucket("bucket");
         s3Uploader.setPath("folder/");
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class)))
+                .thenReturn(null);
         Assertions.assertThrows(MojoExecutionException.class, () -> s3Uploader.execute());
     }
 
     @Test
     @DisplayName("S3Uploader -> SdkClientException en la subida del archivo al bucket")
     public void executeSdkClientExceptionUploadingTest() {
-        s3Uploader.setAmazonS3(amazonS3);
         s3Uploader.setOutputDirectory(testFile.getParent());
         String[] filename = testFile.getName().split("\\.");
         s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
         s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
-        s3Uploader.setRegion(Regions.EU_WEST_3.getName());
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
         s3Uploader.setPath("folder/");
-        Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenThrow(new SdkClientException("Error"));
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class)))
+                .thenThrow(SdkClientException.builder().message("Error").build());
         Assertions.assertThrows(MojoFailureException.class, () -> s3Uploader.execute());
     }
 
     @Test
     @DisplayName("S3Uploader -> AmazonServiceException en la subida del archivo al bucket")
     public void executeAmazonServiceExceptionUploadingTest() {
-        s3Uploader.setAmazonS3(amazonS3);
         s3Uploader.setOutputDirectory(testFile.getParent());
         String[] filename = testFile.getName().split("\\.");
         s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
         s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
-        s3Uploader.setRegion(Regions.EU_WEST_3.getName());
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
         s3Uploader.setPath("folder/");
-        Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenThrow(new AmazonServiceException("Error"));
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class)))
+                .thenThrow(S3Exception.builder().message("Error").build());
         Assertions.assertThrows(MojoFailureException.class, () -> s3Uploader.execute());
     }
 
     @Test
     @DisplayName("S3Uploader -> SdkClientException al añadirle permisos al archivo subido")
     public void executeSdkClientExceptionAclTest() {
-        s3Uploader.setAmazonS3(amazonS3);
         s3Uploader.setOutputDirectory(testFile.getParent());
         String[] filename = testFile.getName().split("\\.");
         s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
         s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
-        s3Uploader.setRegion(Regions.EU_WEST_3.getName());
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
         s3Uploader.setPath("folder/");
-        Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenReturn(new PutObjectResult());
-        Mockito.when(amazonS3.getObjectAcl(Mockito.anyString(), Mockito.anyString())).thenThrow(new SdkClientException("Error"));
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        Mockito.when(s3Client.putObjectAcl(Mockito.any(PutObjectAclRequest.class)))
+                .thenThrow(SdkClientException.builder().message("Error").build());
         Assertions.assertThrows(MojoFailureException.class, () -> s3Uploader.execute());
     }
 
     @Test
     @DisplayName("S3Uploader -> AmazonServiceException al añadirle permisos al archivo subido")
     public void executeAmazonServiceExceptionAclTest() {
-        s3Uploader.setAmazonS3(amazonS3);
         s3Uploader.setOutputDirectory(testFile.getParent());
         String[] filename = testFile.getName().split("\\.");
         s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
         s3Uploader.setExtension(filename[filename.length - 1]);
         s3Uploader.setAccessKey("accessKey");
         s3Uploader.setSecretKey("secretKey");
-        s3Uploader.setRegion(Regions.EU_WEST_3.getName());
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
         s3Uploader.setCannonicalIds(new String[]{"cannonicalIds"});
         s3Uploader.setBucket("bucket");
         s3Uploader.setPath("folder/");
-        Mockito.when(amazonS3.putObject(Mockito.any(PutObjectRequest.class))).thenReturn(new PutObjectResult());
-        Mockito.when(amazonS3.getObjectAcl(Mockito.anyString(), Mockito.anyString())).thenThrow(new AmazonServiceException("Error"));
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        Mockito.when(s3Client.putObjectAcl(Mockito.any(PutObjectAclRequest.class)))
+                .thenThrow(S3Exception.builder().message("Error").build());
         Assertions.assertThrows(MojoFailureException.class, () -> s3Uploader.execute());
     }
 
