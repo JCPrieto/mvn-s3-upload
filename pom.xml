@@ -33,7 +33,7 @@
 
     <groupId>io.github.jcprieto</groupId>
     <artifactId>mvn-s3-upload</artifactId>
-    <version>0.3.0</version>
+    <version>0.3.1</version>
     <packaging>maven-plugin</packaging>
 
     <properties>

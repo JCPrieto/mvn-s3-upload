@@ -13,7 +13,8 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.PutObjectAclRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.File;
 import java.io.FilterInputStream;
@@ -21,7 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -96,24 +98,7 @@ public class S3Uploader extends AbstractMojo {
             RequestBody requestBody = buildRequestBody(file);
             if (s3Client3.putObject(request, requestBody) != null) {
                 getLog().info("Artifact uploaded");
-                if (cannonicalIds.length != 0) {
-                    PutObjectAclRequest putObjectAclRequest = PutObjectAclRequest.builder()
-                            .bucket(bucket)
-                            .key(path + file.getName())
-                            .accessControlPolicy(AccessControlPolicy.builder()
-                                    .grants(Arrays.stream(cannonicalIds).map(c -> Grant.builder()
-                                                    .grantee(Grantee.builder()
-                                                            .type(Type.CANONICAL_USER)
-                                                            .id(c)
-                                                            .build())
-                                                    .permission(Permission.READ)
-                                                    .build())
-                                            .collect(Collectors.toList()))
-                                    .build())
-                            .build();
-                    s3Client3.putObjectAcl(putObjectAclRequest);
-                    getLog().info("Permissions added");
-                }
+                applyAclIfConfigured(s3Client3, file);
                 getLog().info("Upload succesfull");
             } else {
                 throw new MojoExecutionException(path + file.getName() + " not uploaded to " + bucket);
@@ -123,6 +108,39 @@ public class S3Uploader extends AbstractMojo {
         } catch (Exception e) {
             throw new MojoFailureException(path + file.getName() + " not uploaded to " + bucket, e);
         }
+    }
+
+    private void applyAclIfConfigured(S3Client s3Client3, File file) {
+        if (cannonicalIds.length == 0) {
+            return;
+        }
+        List<String> canonicalIds = new ArrayList<>();
+        for (String cannonicalId : cannonicalIds) {
+            if (cannonicalId == null) {
+                continue;
+            }
+            String trimmed = cannonicalId.trim();
+            if (!trimmed.isEmpty()) {
+                canonicalIds.add(trimmed);
+            }
+        }
+        if (canonicalIds.isEmpty()) {
+            getLog().warn("Skipping ACL update: canonicalIds is empty after trimming");
+            return;
+        }
+        PutObjectAclRequest putObjectAclRequest = PutObjectAclRequest.builder()
+                .bucket(bucket)
+                .key(path + file.getName())
+                .grantRead(buildGrantReadHeader(canonicalIds))
+                .build();
+        s3Client3.putObjectAcl(putObjectAclRequest);
+        getLog().info("Permissions added");
+    }
+
+    private String buildGrantReadHeader(List<String> canonicalIds) {
+        return canonicalIds.stream()
+                .map(id -> "id=\"" + id + "\"")
+                .collect(Collectors.joining(","));
     }
 
     private RequestBody buildRequestBody(File file) {

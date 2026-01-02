@@ -105,6 +105,47 @@ public class S3UploaderTest {
     }
 
     @Test
+    @DisplayName("S3Uploader -> Usa grantRead con canonical ids configurados")
+    public void executeAddsGrantReadAclTest() {
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
+        s3Uploader.setAccessKey("accessKey");
+        s3Uploader.setSecretKey("secretKey");
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
+        s3Uploader.setCannonicalIds(new String[]{" id1 ", "id2"});
+        s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        ArgumentCaptor<PutObjectAclRequest> aclCaptor = ArgumentCaptor.forClass(PutObjectAclRequest.class);
+        Mockito.when(s3Client.putObjectAcl(aclCaptor.capture()))
+                .thenReturn(PutObjectAclResponse.builder().build());
+        Assertions.assertDoesNotThrow(s3Uploader::execute);
+        Assertions.assertEquals("id=\"id1\",id=\"id2\"", aclCaptor.getValue().grantRead());
+    }
+
+    @Test
+    @DisplayName("S3Uploader -> Omite ACL cuando los canonical ids están vacíos")
+    public void executeSkipsAclWhenCanonicalIdsEmptyTest() {
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
+        s3Uploader.setAccessKey("accessKey");
+        s3Uploader.setSecretKey("secretKey");
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
+        s3Uploader.setCannonicalIds(new String[]{"   ", ""});
+        s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
+        Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        Assertions.assertDoesNotThrow(s3Uploader::execute);
+        Mockito.verify(s3Client, Mockito.never()).putObjectAcl(Mockito.any(PutObjectAclRequest.class));
+    }
+
+    @Test
     @DisplayName("S3Uploader -> Desactiva aviso deprecación SDK v1 cuando se configura")
     public void disableSdkV1DeprecationAnnouncementTest() {
         s3Uploader.setDisableSdkV1DeprecationAnnouncement(true);
