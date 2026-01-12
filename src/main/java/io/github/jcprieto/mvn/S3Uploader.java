@@ -71,6 +71,8 @@ public class S3Uploader extends AbstractMojo {
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         maybeDisableAwsSdkV1DeprecationAnnouncement();
+        validateConfiguration();
+        path = normalizePath(path);
         String ruta = outputDirectory + FileSystems.getDefault().getSeparator() + warName + "." + extension;
         getLog().info("Uploading " + project.getName() + " : " + ruta);
         File file = new File(ruta);
@@ -108,6 +110,30 @@ public class S3Uploader extends AbstractMojo {
         } catch (Exception e) {
             throw new MojoFailureException(path + file.getName() + " not uploaded to " + bucket, e);
         }
+    }
+
+    private void validateConfiguration() throws MojoExecutionException {
+        if (isBlank(bucket)) {
+            throw new MojoExecutionException("Bucket is required (aws.s3.bucket)");
+        }
+        if (isBlank(region)) {
+            throw new MojoExecutionException("Region is required (aws.s3.region)");
+        }
+        if (isBlank(path)) {
+            throw new MojoExecutionException("Path is required (aws.s3.path)");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private String normalizePath(String value) {
+        String normalized = value.trim().replace('\\', '/');
+        if (!normalized.endsWith("/")) {
+            normalized = normalized + "/";
+        }
+        return normalized;
     }
 
     private void applyAclIfConfigured(S3Client s3Client3, File file) {

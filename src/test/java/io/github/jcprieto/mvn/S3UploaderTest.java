@@ -64,7 +64,7 @@ public class S3UploaderTest {
     @BeforeEach
     public void init() {
         previousDisableDeprecationAnnouncementProperty = System.getProperty("aws.java.v1.disableDeprecationAnnouncement");
-        Mockito.when(project.getName()).thenReturn("Fake");
+        Mockito.lenient().when(project.getName()).thenReturn("Fake");
         if (testFile == null) {
             testFile = new File("target" + FileSystems.getDefault().getSeparator() + "test-classes" + FileSystems.getDefault().getSeparator() + "testfile.jar");
             createNewFile();
@@ -287,6 +287,64 @@ public class S3UploaderTest {
         s3Uploader.setWarName("erpmodularizado");
         s3Uploader.setExtension("war");
         Assertions.assertThrows(MojoExecutionException.class, s3Uploader::execute);
+    }
+
+    @Test
+    @DisplayName("S3Uploader -> Error cuando bucket está vacío")
+    public void executeFailsWhenBucketEmpty() {
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
+        s3Uploader.setPath("folder/");
+        s3Uploader.setBucket("  ");
+        Assertions.assertThrows(MojoExecutionException.class, s3Uploader::execute);
+    }
+
+    @Test
+    @DisplayName("S3Uploader -> Error cuando region está vacío")
+    public void executeFailsWhenRegionEmpty() {
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
+        s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder/");
+        s3Uploader.setRegion(" ");
+        Assertions.assertThrows(MojoExecutionException.class, s3Uploader::execute);
+    }
+
+    @Test
+    @DisplayName("S3Uploader -> Error cuando path está vacío")
+    public void executeFailsWhenPathEmpty() {
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
+        s3Uploader.setBucket("bucket");
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
+        s3Uploader.setPath("  ");
+        Assertions.assertThrows(MojoExecutionException.class, s3Uploader::execute);
+    }
+
+    @Test
+    @DisplayName("S3Uploader -> Normaliza path con separadores y barra final")
+    public void executeNormalizesPath() {
+        s3Uploader.setOutputDirectory(testFile.getParent());
+        String[] filename = testFile.getName().split("\\.");
+        s3Uploader.setWarName(testFile.getName().replace("." + filename[filename.length - 1], ""));
+        s3Uploader.setExtension(filename[filename.length - 1]);
+        s3Uploader.setAccessKey("accessKey");
+        s3Uploader.setSecretKey("secretKey");
+        s3Uploader.setRegion(Region.EU_WEST_3.id());
+        s3Uploader.setBucket("bucket");
+        s3Uploader.setPath("folder\\nested");
+        ArgumentCaptor<PutObjectRequest> requestCaptor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        Mockito.when(s3Client.putObject(requestCaptor.capture(), Mockito.any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        Assertions.assertDoesNotThrow(s3Uploader::execute);
+        Assertions.assertEquals("folder/nested/" + testFile.getName(), requestCaptor.getValue().key());
     }
 
 }
