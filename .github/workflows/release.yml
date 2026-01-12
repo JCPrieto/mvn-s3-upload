@@ -26,6 +26,9 @@ jobs:
       - name: Run tests
         run: mvn test
 
+      - name: Build plugin jar
+        run: mvn -DskipTests package
+
       - name: Read version
         id: version
         run: echo "version=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)" >> "$GITHUB_OUTPUT"
@@ -35,3 +38,4 @@ jobs:
         with:
           name: ${{ steps.version.outputs.version }}
           tag_name: v${{ steps.version.outputs.version }}
+          files: target/mvn-s3-upload-${{ steps.version.outputs.version }}.jar
