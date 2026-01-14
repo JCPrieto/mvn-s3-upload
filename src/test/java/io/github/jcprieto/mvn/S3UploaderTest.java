@@ -65,6 +65,7 @@ public class S3UploaderTest {
     public void init() {
         previousDisableDeprecationAnnouncementProperty = System.getProperty("aws.java.v1.disableDeprecationAnnouncement");
         Mockito.lenient().when(project.getName()).thenReturn("Fake");
+        s3Uploader.setS3Client(s3Client);
         if (testFile == null) {
             testFile = new File("target" + FileSystems.getDefault().getSeparator() + "test-classes" + FileSystems.getDefault().getSeparator() + "testfile.jar");
             createNewFile();

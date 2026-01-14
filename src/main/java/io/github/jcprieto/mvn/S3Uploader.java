@@ -87,16 +87,17 @@ public class S3Uploader extends AbstractMojo {
     private void upload(File file) throws MojoFailureException, MojoExecutionException {
         try {
             S3Client s3Client3 = getS3Client();
+            String objectKey = buildS3Key(path, file.getName());
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucket)
-                    .key(path + file.getName())
+                    .key(objectKey)
                     .build();
             if (showProgress) {
                 if (file.length() <= 0) {
                     getLog().info("Artifact size is 0 bytes, skipping progress logging");
                 }
             }
-            getLog().info("Uploading artifact to: " + bucket + FileSystems.getDefault().getSeparator() + path + FileSystems.getDefault().getSeparator() + file.getName());
+            getLog().info("Uploading artifact to: s3://" + bucket + "/" + objectKey);
             RequestBody requestBody = buildRequestBody(file);
             if (s3Client3.putObject(request, requestBody) != null) {
                 getLog().info("Artifact uploaded");
@@ -140,6 +141,7 @@ public class S3Uploader extends AbstractMojo {
         if (cannonicalIds.length == 0) {
             return;
         }
+        String objectKey = buildS3Key(path, file.getName());
         List<String> canonicalIds = new ArrayList<>();
         for (String cannonicalId : cannonicalIds) {
             if (cannonicalId == null) {
@@ -156,11 +158,16 @@ public class S3Uploader extends AbstractMojo {
         }
         PutObjectAclRequest putObjectAclRequest = PutObjectAclRequest.builder()
                 .bucket(bucket)
-                .key(path + file.getName())
+                .key(objectKey)
                 .grantRead(buildGrantReadHeader(canonicalIds))
                 .build();
         s3Client3.putObjectAcl(putObjectAclRequest);
         getLog().info("Permissions added");
+    }
+
+    private String buildS3Key(String normalizedPath, String fileName) {
+        String base = normalizedPath == null ? "" : normalizedPath;
+        return base + fileName;
     }
 
     private String buildGrantReadHeader(List<String> canonicalIds) {
@@ -302,5 +309,9 @@ public class S3Uploader extends AbstractMojo {
 
     public void setDisableSdkV1DeprecationAnnouncement(boolean disableSdkV1DeprecationAnnouncement) {
         this.disableSdkV1DeprecationAnnouncement = disableSdkV1DeprecationAnnouncement;
+    }
+
+    public void setS3Client(S3Client s3Client) {
+        this.s3Client = s3Client;
     }
 }
