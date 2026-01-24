@@ -62,6 +62,9 @@ public class S3Uploader extends AbstractMojo {
     @Parameter(property = "aws.s3.cannonicalIds")
     private String[] cannonicalIds = new String[0];
 
+    @Parameter(property = "aws.s3.canonicalIds")
+    private String[] canonicalIds = new String[0];
+
     @Parameter(property = "aws.s3.showProgress", defaultValue = "false")
     private boolean showProgress;
 
@@ -152,20 +155,8 @@ public class S3Uploader extends AbstractMojo {
     }
 
     private void applyAclIfConfigured(S3Client s3Client3, File file) {
-        if (cannonicalIds.length == 0) {
-            return;
-        }
         String objectKey = buildS3Key(path, file.getName());
-        List<String> canonicalIds = new ArrayList<>();
-        for (String cannonicalId : cannonicalIds) {
-            if (cannonicalId == null) {
-                continue;
-            }
-            String trimmed = cannonicalId.trim();
-            if (!trimmed.isEmpty()) {
-                canonicalIds.add(trimmed);
-            }
-        }
+        List<String> canonicalIds = collectCanonicalIds();
         if (canonicalIds.isEmpty()) {
             getLog().warn("Skipping ACL update: canonicalIds is empty after trimming");
             return;
@@ -177,6 +168,28 @@ public class S3Uploader extends AbstractMojo {
                 .build();
         s3Client3.putObjectAcl(putObjectAclRequest);
         getLog().info("Permissions added");
+    }
+
+    private List<String> collectCanonicalIds() {
+        List<String> canonicalIds = new ArrayList<>();
+        addCanonicalIds(canonicalIds, cannonicalIds);
+        addCanonicalIds(canonicalIds, this.canonicalIds);
+        return canonicalIds;
+    }
+
+    private void addCanonicalIds(List<String> canonicalIds, String[] values) {
+        if (values == null) {
+            return;
+        }
+        for (String canonicalId : values) {
+            if (canonicalId == null) {
+                continue;
+            }
+            String trimmed = canonicalId.trim();
+            if (!trimmed.isEmpty()) {
+                canonicalIds.add(trimmed);
+            }
+        }
     }
 
     private String buildS3Key(String normalizedPath, String fileName) {
@@ -286,6 +299,10 @@ public class S3Uploader extends AbstractMojo {
 
     public void setCannonicalIds(String[] cannonicalIds) {
         this.cannonicalIds = cannonicalIds;
+    }
+
+    public void setCanonicalIds(String[] canonicalIds) {
+        this.canonicalIds = canonicalIds;
     }
 
     public void setBucket(String bucket) {
