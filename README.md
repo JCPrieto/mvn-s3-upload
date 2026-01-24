@@ -13,9 +13,11 @@ con anterioridad) o AWS Console.
 
 #### Cómo añadirlo a tu proyecto
 
-1. Asegúrate de usar la última versión publicada en Maven Central (reemplaza `0.3.3` si aparece una más reciente).
+1. Asegúrate de usar la última versión publicada en Maven Central (reemplaza `0.3.4` si aparece una más reciente).
 2. Declara el plugin en tu `pom.xml` dentro de la sección `<build><plugins>`.
 3. Configura bucket, región, ruta y credenciales según tu caso.
+   Puedes usar `accessKey/secretKey` (y `sessionToken` opcional) o dejarlo vacío para usar el
+   `DefaultCredentialsProvider`.
 4. Invoca el goal `s3uploader` en la fase donde quieras que se ejecute (por ejemplo, con una ejecución sin fase se
    ejecutará al lanzar `mvn package`).
 
@@ -27,14 +29,15 @@ con anterioridad) o AWS Console.
     <plugin>
         <groupId>io.github.jcprieto</groupId>
         <artifactId>mvn-s3-upload</artifactId>
-      <version>0.3.3</version>
+      <version>0.3.4</version>
         <configuration>
             <bucket>my-bucket</bucket>
             <region>eu-west-1</region>
-           <path>folder1/folder2/</path>
+          <path>folder1/folder2/</path>
             <extension>war</extension>
             <accessKey>XXXXXXXXXXX</accessKey>
             <secretKey>XXXXXXXXXXX</secretKey>
+          <sessionToken>XXXXXXXXXXX</sessionToken>
             <showProgress>true</showProgress>
             <cannonicalIds>
                 <cannonicalId>XXXXXXXXXXX</cannonicalId>
@@ -60,6 +63,8 @@ El plugin normaliza `<path>` para que use `/` y termine con barra.
 
 #### Changelog
 
+- 0.3.4:
+  - Credenciales por defecto (DefaultCredentialsProvider) y session token opcional.
 - 0.3.3:
   - Key S3 estable en logs y en la subida.
   - Tests sin acceso real a S3.

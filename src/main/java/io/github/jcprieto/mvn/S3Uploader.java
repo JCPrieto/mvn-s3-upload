@@ -7,9 +7,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.*;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -52,11 +50,14 @@ public class S3Uploader extends AbstractMojo {
     @Parameter(property = "aws.s3.path", required = true)
     private String path;
 
-    @Parameter(property = "aws.s3.accesskey", required = true)
+    @Parameter(property = "aws.s3.accesskey")
     private String accessKey;
 
-    @Parameter(property = "aws.s3.secretkey", required = true)
+    @Parameter(property = "aws.s3.secretkey")
     private String secretKey;
+
+    @Parameter(property = "aws.s3.sessionToken")
+    private String sessionToken;
 
     @Parameter(property = "aws.s3.cannonicalIds")
     private String[] cannonicalIds = new String[0];
@@ -127,6 +128,14 @@ public class S3Uploader extends AbstractMojo {
         }
         if (isBlank(path)) {
             throw new MojoExecutionException("Path is required (aws.s3.path)");
+        }
+        boolean accessKeyBlank = isBlank(accessKey);
+        boolean secretKeyBlank = isBlank(secretKey);
+        if (accessKeyBlank ^ secretKeyBlank) {
+            throw new MojoExecutionException("Both accessKey and secretKey are required when using static credentials");
+        }
+        if (!isBlank(sessionToken) && accessKeyBlank) {
+            throw new MojoExecutionException("Session token requires accessKey and secretKey");
         }
     }
 
@@ -212,15 +221,30 @@ public class S3Uploader extends AbstractMojo {
     }
 
     protected S3Client createS3Client() {
-        AwsBasicCredentials awsCreds = AwsBasicCredentials.builder()
-                .accessKeyId(accessKey)
-                .secretAccessKey(secretKey)
-                .build();
-        AwsCredentialsProvider awsCredentialsProvider = StaticCredentialsProvider.create(awsCreds);
+        AwsCredentialsProvider awsCredentialsProvider = buildCredentialsProvider();
         return S3Client.builder()
                 .credentialsProvider(awsCredentialsProvider)
                 .region(Region.of(region))
                 .build();
+    }
+
+    private AwsCredentialsProvider buildCredentialsProvider() {
+        if (isBlank(accessKey) && isBlank(secretKey)) {
+            return DefaultCredentialsProvider.builder().build();
+        }
+        if (isBlank(sessionToken)) {
+            AwsBasicCredentials awsCreds = AwsBasicCredentials.builder()
+                    .accessKeyId(accessKey)
+                    .secretAccessKey(secretKey)
+                    .build();
+            return StaticCredentialsProvider.create(awsCreds);
+        }
+        AwsSessionCredentials awsCreds = AwsSessionCredentials.builder()
+                .accessKeyId(accessKey)
+                .secretAccessKey(secretKey)
+                .sessionToken(sessionToken)
+                .build();
+        return StaticCredentialsProvider.create(awsCreds);
     }
 
     private void maybeDisableAwsSdkV1DeprecationAnnouncement() {
@@ -250,6 +274,10 @@ public class S3Uploader extends AbstractMojo {
 
     public void setSecretKey(String secretKey) {
         this.secretKey = secretKey;
+    }
+
+    public void setSessionToken(String sessionToken) {
+        this.sessionToken = sessionToken;
     }
 
     public void setRegion(String region) {
