@@ -348,4 +348,34 @@ public class S3UploaderTest {
         Assertions.assertEquals("folder/nested/" + testFile.getName(), requestCaptor.getValue().key());
     }
 
+    @Test
+    @DisplayName("S3Uploader -> Reutiliza el cliente S3")
+    public void getS3ClientReusesInstance() {
+        S3Client client = Mockito.mock(S3Client.class);
+        CountingS3Uploader uploader = new CountingS3Uploader(client);
+        S3Client first = uploader.getS3Client();
+        S3Client second = uploader.getS3Client();
+        Assertions.assertSame(first, second);
+        Assertions.assertEquals(1, uploader.getCreateCount());
+    }
+
+    private static class CountingS3Uploader extends S3Uploader {
+        private final S3Client client;
+        private int createCount;
+
+        private CountingS3Uploader(S3Client client) {
+            this.client = client;
+        }
+
+        @Override
+        protected S3Client createS3Client() {
+            createCount++;
+            return client;
+        }
+
+        private int getCreateCount() {
+            return createCount;
+        }
+    }
+
 }

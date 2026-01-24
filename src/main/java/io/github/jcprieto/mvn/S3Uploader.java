@@ -68,6 +68,7 @@ public class S3Uploader extends AbstractMojo {
     private boolean disableSdkV1DeprecationAnnouncement;
 
     private S3Client s3Client;
+    private boolean s3ClientOwned;
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         maybeDisableAwsSdkV1DeprecationAnnouncement();
@@ -78,7 +79,11 @@ public class S3Uploader extends AbstractMojo {
         File file = new File(ruta);
         if (file.exists()) {
             getLog().info("Getting artifact: " + file);
-            upload(file);
+            try {
+                upload(file);
+            } finally {
+                closeS3ClientIfOwned();
+            }
         } else {
             throw new MojoExecutionException("Artifact not found");
         }
@@ -192,10 +197,21 @@ public class S3Uploader extends AbstractMojo {
         }
     }
 
-    private S3Client getS3Client() {
+    S3Client getS3Client() {
         if (s3Client != null) {
             return s3Client;
         }
+        s3Client = createS3Client();
+        s3ClientOwned = true;
+        return s3Client;
+    }
+
+    public void setS3Client(S3Client s3Client) {
+        this.s3Client = s3Client;
+        this.s3ClientOwned = false;
+    }
+
+    protected S3Client createS3Client() {
         AwsBasicCredentials awsCreds = AwsBasicCredentials.builder()
                 .accessKeyId(accessKey)
                 .secretAccessKey(secretKey)
@@ -311,7 +327,12 @@ public class S3Uploader extends AbstractMojo {
         this.disableSdkV1DeprecationAnnouncement = disableSdkV1DeprecationAnnouncement;
     }
 
-    public void setS3Client(S3Client s3Client) {
-        this.s3Client = s3Client;
+    private void closeS3ClientIfOwned() {
+        if (!s3ClientOwned || s3Client == null) {
+            return;
+        }
+        s3Client.close();
+        s3Client = null;
+        s3ClientOwned = false;
     }
 }
