@@ -121,3 +121,4 @@ Sera borrado src/main/resources/
 Sera borrado src/test/
 /MVN-S3-Upload.iml
 /.idea/
+/.codex*
